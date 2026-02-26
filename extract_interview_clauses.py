@@ -1073,18 +1073,18 @@ def main():
     ws.title = "interviews"
     
     # Add header row with new columns
-    headers = ["Filename", "Sent", "Clause", "Speaker", "Text", "evaluative term", "object", "Tools", "Features", "Category"]
+    headers = ["Filename", "Sent", "Clause", "Speaker", "Text", "evaluative term", "object", "Tools", "Features", "Category", "Sentiment"]
     ws.append(headers)
 
     total_rows = 0
     for word_path in word_files:
         rows = parse_interview(str(word_path), None, None, nlp)
         for row in rows:
-            ws.append(row + ["", "", ""])  # Pad with empty Tools/Features/Category
+            ws.append(row + ["", "", "", ""])  # Pad with empty Tools/Features/Category/Sentiment
         total_rows += len(rows)
         print(f"Processed {word_path.name}: {len(rows)} rows")
 
-    # Set column widths (A-D auto, E 50, F-J 25)
+    # Set column widths (A-D auto, E 50, F-K 25)
     for col_idx in range(1, 5):
         max_len = 0
         for cell in ws.iter_rows(min_row=1, max_row=total_rows + 1, min_col=col_idx, max_col=col_idx):
@@ -1094,12 +1094,12 @@ def main():
             max_len = max(max_len, len(str(value)))
         ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = max_len + 2
     ws.column_dimensions["E"].width = 50
-    for col_letter in ["F", "G", "H", "I", "J"]:
+    for col_letter in ["F", "G", "H", "I", "J", "K"]:
         ws.column_dimensions[col_letter].width = 25
 
-    # Create Excel table for the interviews sheet (now A1:J...)
+    # Create Excel table for the interviews sheet (now A1:K...)
     from openpyxl.worksheet.table import Table, TableStyleInfo
-    tab = Table(displayName="InterviewsTable", ref=f"A1:J{total_rows + 1}")
+    tab = Table(displayName="InterviewsTable", ref=f"A1:K{total_rows + 1}")
     style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
                            showLastColumn=False, showRowStripes=True, showColumnStripes=False)
     tab.tableStyleInfo = style
@@ -1143,18 +1143,24 @@ def main():
         del wb["Categories"]
     # Create 'Categories' sheet as a formatted table
     cat_sheet = wb.create_sheet("Categories")
-    cat_headers = ["Features", "Categories", "Tool"]
+    cat_headers = ["Features", "Categories", "Tool", "Sentiment"]
     cat_sheet.append(cat_headers)
     features = ["speed", "consistency", "sorting", "collaboration", "feedback", "grouping", "questions", "setup"]
     categories = ["benefits", "challenges", "impact", "future use"]
     tools = ["Gradescope", "WebAssign", "Amathuba quizzes", "Pearson"]
-    max_cat_len = max(len(features), len(categories), len(tools))
+    sentiments = ["positive", "negative", "mixed"]
+    max_cat_len = max(len(features), len(categories), len(tools), len(sentiments))
     for i in range(max_cat_len):
-        row = [features[i] if i < len(features) else "", categories[i] if i < len(categories) else "", tools[i] if i < len(tools) else ""]
+        row = [
+            features[i] if i < len(features) else "",
+            categories[i] if i < len(categories) else "",
+            tools[i] if i < len(tools) else "",
+            sentiments[i] if i < len(sentiments) else ""
+        ]
         cat_sheet.append(row)
     # Format as table
     from openpyxl.worksheet.table import Table, TableStyleInfo
-    cat_table_ref = f"A1:C{max_cat_len+1}"
+    cat_table_ref = f"A1:D{max_cat_len+1}"
     cat_table = Table(displayName="CategoryTable", ref=cat_table_ref)
     cat_table_style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False, showLastColumn=False, showRowStripes=True, showColumnStripes=False)
     cat_table.tableStyleInfo = cat_table_style
@@ -1170,19 +1176,25 @@ def main():
     tool_ref = f"Categories!$C$2:$C${max_cat_len+1}"
     dn_tools = DefinedName("NameTools", attr_text=tool_ref)
     wb.defined_names.add(dn_tools)
+    sentiment_ref = f"Categories!$D$2:$D${max_cat_len+1}"
+    dn_sentiment = DefinedName("NameSentiment", attr_text=sentiment_ref)
+    wb.defined_names.add(dn_sentiment)
 
     # Add data validation to Features and Category columns in interviews
     from openpyxl.worksheet.datavalidation import DataValidation
     features_dv = DataValidation(type="list", formula1="=NameFeatures", allow_blank=True)
     category_dv = DataValidation(type="list", formula1="=NameCategories", allow_blank=True)
     tools_dv = DataValidation(type="list", formula1="=NameTools", allow_blank=True)
+    sentiment_dv = DataValidation(type="list", formula1="=NameSentiment", allow_blank=True)
     ws.add_data_validation(features_dv)
     ws.add_data_validation(category_dv)
     ws.add_data_validation(tools_dv)
-    # Tools = H, Features = I, Category = J
+    ws.add_data_validation(sentiment_dv)
+    # Tools = H, Features = I, Category = J, Sentiment = K
     tools_dv.add(f"H2:H{total_rows+1}")
     features_dv.add(f"I2:I{total_rows+1}")
     category_dv.add(f"J2:J{total_rows+1}")
+    sentiment_dv.add(f"K2:K{total_rows+1}")
     wb.save(output_excel)
     print(f"Saved {total_rows} rows from {len(word_files)} files to {output_excel}")
 
