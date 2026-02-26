@@ -9,6 +9,7 @@ cloudpathlib==0.23.0
 confection==0.1.5
 cymem==2.0.13
 docx==0.2.4
+en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl#sha256=293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63
 et_xmlfile==2.0.0
 idna==3.11
 Jinja2==3.1.6
@@ -26,6 +27,7 @@ preshed==3.0.12
 pydantic==2.12.5
 pydantic_core==2.41.5
 Pygments==2.19.2
+python-docx==1.2.0
 requests==2.32.5
 rich==14.3.3
 setuptools==82.0.0

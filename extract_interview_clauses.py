@@ -1069,7 +1069,11 @@ def main():
     # Write to Excel
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(["Filename", "Sent", "Clause", "Speaker", "Text", "evaluative term", "object"])
+    ws.title = "interviews"
+    
+    # Add header row
+    headers = ["Filename", "Sent", "Clause", "Speaker", "Text", "evaluative term", "object"]
+    ws.append(headers)
 
     total_rows = 0
     for word_path in word_files:
@@ -1078,6 +1082,52 @@ def main():
             ws.append(row)
         total_rows += len(rows)
         print(f"Processed {word_path.name}: {len(rows)} rows")
+
+    # Set column widths
+    for col_idx in range(1, 5):
+        max_len = 0
+        for cell in ws.iter_rows(min_row=1, max_row=total_rows + 1, min_col=col_idx, max_col=col_idx):
+            value = cell[0].value
+            if value is None:
+                continue
+            max_len = max(max_len, len(str(value)))
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = max_len + 2
+
+    ws.column_dimensions["E"].width = 50
+    ws.column_dimensions["F"].width = 25
+    ws.column_dimensions["G"].width = 25
+
+    # Create Excel table for the interviews sheet
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+    tab = Table(displayName="InterviewsTable", ref=f"A1:G{total_rows + 1}")
+    style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                           showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+    tab.tableStyleInfo = style
+    ws.add_table(tab)
+
+    # Create 'terms' sheet with evaluative inputs
+    terms_sheet = wb.create_sheet("terms")
+    evaluative_lists = {
+        "OPINION_VERBS": OPINION_VERBS,
+        "EVALUATIVE_VERBS": EVALUATIVE_VERBS,
+        "ENABLE_VERBS": ENABLE_VERBS,
+        "COMPARATIVE_WORDS": COMPARATIVE_WORDS,
+        "EVALUATIVE_ADJECTIVES": EVALUATIVE_ADJECTIVES,
+        "EVALUATIVE_NOUNS": EVALUATIVE_NOUNS,
+        "EVALUATIVE_ADVERBS": EVALUATIVE_ADVERBS,
+    }
+    
+    # Find the maximum list length for consistent column sizing
+    max_length = max(len(lst) for lst in evaluative_lists.values())
+    
+    # Write headers and data
+    col = 1
+    for list_name, list_set in evaluative_lists.items():
+        terms_sheet.cell(row=1, column=col, value=list_name)
+        sorted_terms = sorted(list_set)
+        for row_idx, term in enumerate(sorted_terms, start=2):
+            terms_sheet.cell(row=row_idx, column=col, value=term)
+        col += 1
 
     wb.save(output_excel)
     print(f"Saved {total_rows} rows from {len(word_files)} files to {output_excel}")
